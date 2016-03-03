@@ -1,4 +1,19 @@
+/*
+ * All original work and credit to zdayton
+ *
+ * Expanded by twschum to include support for the NewHandle
+ * design which integrates 3 buttons and a hat as specified
+ * in the Board BOM (specifically, the operation of the hat
+ *
+ * Switches (3):
+ *    C&K Components RS-032G05A3-SM RT
+ *    Digi-Key Part Number	CKN10388CT-ND
+ * Hat:
+ *    E-Switch JS5208
+ *    Digi-Key Part Number	EG4561-ND
+ */
 
+// HID Joystick state struct, defined in USBAPI.h
 JoyState_t joySt;
 
 const bool DEBUG = false;  // set to true to debug the raw values
@@ -16,6 +31,16 @@ float pivot_lng = 2.25;
 float deadzone = 0.1;  // smaller values will be set to 0
 int gain = 150;
 
+// Pin assignments
+#define BTN1 2
+#define BTN2 3
+#define BTN3 4
+
+#define HAT1_UP     5
+#define HAT1_LEFT   6
+#define HAT1_DOWN   7
+#define HAT1_RIGHT  8
+#define HAT1_CENTER 9
 
 // trigonometric constants
 float sqrt3 = sqrt(3.0);
@@ -31,14 +56,17 @@ void setup()
     pinMode(A0, INPUT);
     pinMode(A1, INPUT);
     pinMode(A2, INPUT);
-    pinMode(2,  INPUT);
-    pinMode(3,  INPUT);
-    pinMode(4,  INPUT);
-    pinMode(5,  INPUT);
-    pinMode(6,  INPUT);
-    pinMode(7,  INPUT);
-    pinMode(8,  INPUT);
-    pinMode(9,  INPUT);
+
+    pinMode(BTN1, INPUT);
+    pinMode(BTN2, INPUT);
+    pinMode(BTN3, INPUT);
+
+    pinMode(HAT1_UP,     INPUT);
+    pinMode(HAT1_LEFT,   INPUT);
+    pinMode(HAT1_DOWN,   INPUT);
+    pinMode(HAT1_RIGHT,  INPUT);
+    pinMode(HAT1_CENTER, INPUT);
+
     digitalWrite(2,HIGH);
     digitalWrite(3,HIGH);
     digitalWrite(4,HIGH);
@@ -134,6 +162,36 @@ void getForwardKinematic()
     }
 }
 
+int getHatState()
+{
+    int hat = 0;
+    hat |= !digitalRead(HAT1_UP) << 0;
+    hat |= !digitalRead(HAT1_LEFT) << 1;
+    hat |= !digitalRead(HAT1_DOWN) << 4;
+    hat |= !digitalRead(HAT1_RIGHT) << 3;
+    hat |= !digitalRead(HAT1_CENTER) << 4;
+
+    switch (hat) {
+        case 1: return 0;  // b00001  U (hat:0)
+        case 2: return 2;  // b00010  L (hat:2)
+        case 4: return 4;  // b00100  D (hat:4)
+        case 8: return 6;  // b01000  R (hat:6)
+        case 16: return 8; // b10000  x (hat:8) (center)
+    }
+}
+
+char* hatStateName(int hat)
+{
+    // these values from USBAPI/HID
+    switch (hat) {
+        case 0: return "UP";
+        case 2: return "LEFT";
+        case 4: return "DOWN";
+        case 6: return "RIGHT";
+        case 8: return "CENTER";
+    }
+}
+
 float getDeadzone(float value)
 {
     if (value < -1*deadzone) {
@@ -151,19 +209,16 @@ float getDeadzone(float value)
 
 void loop()
 {
+    // TODO actual button debouncing
+    delay(10); // 10ms = 100 Hz polling
+
     getForwardKinematic();
 
-    // discreet handle buttons
-    int btn1 = !digitalRead(2);
-    int btn2 = !digitalRead(3);
-    int btn3 = !digitalRead(4);
-
-    // hat switch positions
-    int hat0 = !=digitalRead(5);
-    int hat1 = !=digitalRead(6);
-    int hat2 = !=digitalRead(7);
-    int hat3 = !=digitalRead(8);
-    int hat4 = !=digitalRead(9);
+    // grab handle button states
+    int btn1 = !digitalRead(BTN1);
+    int btn2 = !digitalRead(BTN2);
+    int btn3 = !digitalRead(BTN3);
+    int hat1 = getHatState();
 
     // subtract zero position
     xValue -= xZero;
@@ -176,23 +231,24 @@ void loop()
     zValue = getDeadzone(zValue);
 
 
-    //apply gain
+    // apply gain
     int xVal = xValue*gain;
     int yVal = yValue*gain;
     int zVal = zValue*gain;
 
-    //constrain outputs to +- 100
+    // constrain outputs to +- 100
     xVal = constrain(xVal,-100,100);
     yVal = constrain(yVal,-100,100);
     zVal = constrain(zVal,-100,100);
 
-    //map outputs to 8 bit values
+    // map outputs to 8 bit values
     joySt.xAxis = map(xVal, -100, 100, 0, 255);
     joySt.yAxis = map(yVal, -100, 100, 0, 255);
     joySt.zAxis = map(zVal, -100, 100, 0, 255);
 
-    joySt.buttons = btn1 | (btn2<<1) | (btn3<<2) | (hat0<<3) |
-                    (hat1<<4) | (hat2<<5) | (hat3<<6) | (hat4<<3);
+    // write button and hat states to JoystickSt
+    joySt.buttons = btn1 | (btn2<<1) | (btn3<<2);
+    joySt.hatSw1 = hat1;
 
     if (DEBUG) {
         Serial.print("X: ");
@@ -207,6 +263,8 @@ void loop()
         Serial.println(btn2);
         Serial.print("B3: ");
         Serial.println(btn3);
+        Serial.print("H1: ");
+        Serial.println(hatStateName(hat1));
     }
 
     // Send to USB
