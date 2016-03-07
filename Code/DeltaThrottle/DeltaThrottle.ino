@@ -42,14 +42,16 @@ int gain = 150;
 #define HAT1_RIGHT  8
 #define HAT1_CENTER 9
 
+#define ENABLE  14
+
 // trigonometric constants
 float sqrt3 = sqrt(3.0);
-float pi = 3.141592653;    // PI
+float pi = 3.141592653;
 float sin120 = sqrt3/2.0;
 float cos120 = -0.5;
 float tan60 = sqrt3;
 float sin30 = 0.5;
-float tan30 = 1/sqrt3;
+float tan30 = 1.0/sqrt3;
 
 void setup()
 {
@@ -60,6 +62,7 @@ void setup()
     pinMode(BTN1, INPUT);
     pinMode(BTN2, INPUT);
     pinMode(BTN3, INPUT);
+    pinMode(ENABLE, INPUT);
 
     pinMode(HAT1_UP,     INPUT);
     pinMode(HAT1_LEFT,   INPUT);
@@ -67,6 +70,7 @@ void setup()
     pinMode(HAT1_RIGHT,  INPUT);
     pinMode(HAT1_CENTER, INPUT);
 
+    // TODO use open collector here
     digitalWrite(2,HIGH);
     digitalWrite(3,HIGH);
     digitalWrite(4,HIGH);
@@ -75,6 +79,7 @@ void setup()
     digitalWrite(7,HIGH);
     digitalWrite(8,HIGH);
     digitalWrite(9,HIGH);
+    digitalWrite(ENABLE,HIGH);
 
     if (DEBUG) {
         Serial.begin(9600);
@@ -212,6 +217,7 @@ void loop()
     // TODO actual button debouncing
     delay(10); // 10ms = 100 Hz polling
 
+    // analog read and delta math for xyz
     getForwardKinematic();
 
     // grab handle button states
@@ -220,33 +226,42 @@ void loop()
     int btn3 = !digitalRead(BTN3);
     int hat1 = getHatState();
 
-    // subtract zero position
-    xValue -= xZero;
-    yValue -= yZero;
-    zValue -= zZero;
+    // update xyz if enabled (0 otherwise)
+    if (!digitalRead(ENABLE)) {
 
-    // apply deadzone modifiers
-    xValue = getDeadzone(xValue);
-    yValue = getDeadzone(yValue);
-    zValue = getDeadzone(zValue);
+        // subtract zero position
+        xValue -= xZero;
+        yValue -= yZero;
+        zValue -= zZero;
 
+        // apply deadzone modifiers
+        xValue = getDeadzone(xValue);
+        yValue = getDeadzone(yValue);
+        zValue = getDeadzone(zValue);
 
-    // apply gain
-    int xVal = xValue*gain;
-    int yVal = yValue*gain;
-    int zVal = zValue*gain;
+        // apply gain
+        xValue *= gain;
+        yValue *= gain;
+        zValue *= gain;
 
-    // constrain outputs to +- 100
-    xVal = constrain(xVal,-100,100);
-    yVal = constrain(yVal,-100,100);
-    zVal = constrain(zVal,-100,100);
+        // constrain outputs to +- 100
+        xValue = constrain(xValue,-100,100);
+        yValue = constrain(yValue,-100,100);
+        zValue = constrain(zValue,-100,100);
+    }
+    else {
+        // when disabled, force zeros
+        xValue = 0;
+        yValue = 0;
+        zValue = 0;
+    }
 
-    // map outputs to 8 bit values
-    joySt.xAxis = map(xVal, -100, 100, 0, 255);
-    joySt.yAxis = map(yVal, -100, 100, 0, 255);
-    joySt.zAxis = map(zVal, -100, 100, 0, 255);
+    // map outputs to 8 bit values, update joystick state
+    joySt.xAxis = map(xValue, -100, 100, 0, 255);
+    joySt.yAxis = map(yValue, -100, 100, 0, 255);
+    joySt.zAxis = map(zValue, -100, 100, 0, 255);
 
-    // write button and hat states to JoystickSt
+    // write button and hat states to joystick state
     joySt.buttons = btn1 | (btn2<<1) | (btn3<<2);
     joySt.hatSw1 = hat1;
 
