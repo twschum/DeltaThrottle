@@ -14,9 +14,9 @@
  */
 
 // HID Joystick state struct, defined in USBAPI.h
-JoyState_t joystickState;
+//JoyState_t joystickState;
 
-const bool DEBUG = false;  // set to true to debug the raw values
+const bool DEBUG = true;  // set to true to debug the raw values
 
 float xZero, yZero, zZero;
 float xValue, yValue, zValue;
@@ -76,16 +76,16 @@ void setup()
         Serial.begin(9600);
     }
 
-    getForwardKinematic();
+    //getForwardKinematic();
 
     // calculate neutral position
     xZero = 0;
     yZero = 0;
     zZero = zValue;
 
-    joystickState.xAxis = 0;
-    joystickState.yAxis = 0;
-    joystickState.zAxis = 0;
+    //joystickState.xAxis = 0;
+    //joystickState.yAxis = 0;
+    //joystickState.zAxis = 0;
 }
 
 // The delta kinematic math
@@ -140,7 +140,7 @@ void getForwardKinematic()
     xValue = (a1*zValue + b1)/dnm;
     yValue = (a2*zValue + b2)/dnm;
 
-    if(DEBUG) {
+    if(false) {
         Serial.print("T1: ");
         Serial.println(theta1);
         Serial.print("T2: ");
@@ -163,7 +163,7 @@ int getHatState()
     int hat = 0;
     hat |= !digitalRead(HAT1_UP) << 0;
     hat |= !digitalRead(HAT1_LEFT) << 1;
-    hat |= !digitalRead(HAT1_DOWN) << 4;
+    hat |= !digitalRead(HAT1_DOWN) << 2;
     hat |= !digitalRead(HAT1_RIGHT) << 3;
     hat |= !digitalRead(HAT1_CENTER) << 4;
 
@@ -203,10 +203,12 @@ float applyDeadzone(float value)
     return value;
 }
 
+int last = 0;
+
 void loop()
 {
-    // TODO actual button debouncing
-    delay(10); // 10ms = 100 Hz polling
+    // 10ms = 100 Hz polling
+    delay(10);
 
     // analog read and delta math for xyz
     getForwardKinematic();
@@ -248,33 +250,51 @@ void loop()
     }
 
     // map outputs to 8 bit values, update JoystickSt
-    joystickState.xAxis = map(xValue, -100, 100, 0, 255);
-    joystickState.yAxis = map(yValue, -100, 100, 0, 255);
-    joystickState.zAxis = map(zValue, -100, 100, 0, 255);
+    //joystickState.xAxis = map(xValue, -100, 100, 0, 255);
+    //joystickState.yAxis = map(yValue, -100, 100, 0, 255);
+    //joystickState.zAxis = map(zValue, -100, 100, 0, 255);
 
     // write button and hat states to JoystickSt
-    joystickState.buttons = btn1 | (btn2<<1) | (btn3<<2);
-    joystickState.hatSw1 = hat1;
+    //joystickState.buttons = btn1 | (btn2<<1) | (btn3<<2);
+    //joystickState.hatSw1 = hat1;
+    
+
+//    if(btn1) {
+//      if (last == 0) {
+//        Serial.print('0');
+//      }
+//      else {
+//        Serial.print('-');
+//      }
+//    }
+//    else if (last == 1) {
+//      Serial.println("x");
+//    }
+//    last = btn1;
 
     if (DEBUG) {
         Serial.print("X: ");
-        Serial.println(xVal);
+        Serial.println(xValue);
+        Serial.print("Raw: ");
+        Serial.println( analogRead(A0) );
         Serial.print("Y: ");
-        Serial.println(yVal);
+        Serial.println(yValue);
         Serial.print("Z: ");
-        Serial.println(zVal);
+        Serial.println(zValue);
         Serial.print("B1: ");
         Serial.println(btn1);
         Serial.print("B2: ");
         Serial.println(btn2);
         Serial.print("B3: ");
         Serial.println(btn3);
+        Serial.print("EN: ");
+        Serial.println(!digitalRead(ENABLE));
         Serial.print("H1: ");
         Serial.println(hatStateName(hat1));
     }
 
     // Send to USB
-    Joystick.setState(&joystickState);
+    //Joystick.setState(&joystickState);
 
     if (DEBUG) {
         delay(1000);
