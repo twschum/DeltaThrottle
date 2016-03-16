@@ -14,7 +14,7 @@
  */
 
 // HID Joystick state struct, defined in USBAPI.h
-JoyState_t joySt;
+JoyState_t joystickState;
 
 const bool DEBUG = false;  // set to true to debug the raw values
 
@@ -55,31 +55,22 @@ float tan30 = 1.0/sqrt3;
 
 void setup()
 {
+    // analog inputs from the potentiometers
     pinMode(A0, INPUT);
     pinMode(A1, INPUT);
     pinMode(A2, INPUT);
 
-    pinMode(BTN1, INPUT);
-    pinMode(BTN2, INPUT);
-    pinMode(BTN3, INPUT);
-    pinMode(ENABLE, INPUT);
+    // digital button inputs with pullup resistor
+    pinMode(BTN1, INPUT_PULLUP);
+    pinMode(BTN2, INPUT_PULLUP);
+    pinMode(BTN3, INPUT_PULLUP);
+    pinMode(ENABLE, INPUT_PULLUP);
 
-    pinMode(HAT1_UP,     INPUT);
-    pinMode(HAT1_LEFT,   INPUT);
-    pinMode(HAT1_DOWN,   INPUT);
-    pinMode(HAT1_RIGHT,  INPUT);
-    pinMode(HAT1_CENTER, INPUT);
-
-    // TODO use open collector here
-    digitalWrite(2,HIGH);
-    digitalWrite(3,HIGH);
-    digitalWrite(4,HIGH);
-    digitalWrite(5,HIGH);
-    digitalWrite(6,HIGH);
-    digitalWrite(7,HIGH);
-    digitalWrite(8,HIGH);
-    digitalWrite(9,HIGH);
-    digitalWrite(ENABLE,HIGH);
+    pinMode(HAT1_UP,     INPUT_PULLUP);
+    pinMode(HAT1_LEFT,   INPUT_PULLUP);
+    pinMode(HAT1_DOWN,   INPUT_PULLUP);
+    pinMode(HAT1_RIGHT,  INPUT_PULLUP);
+    pinMode(HAT1_CENTER, INPUT_PULLUP);
 
     if (DEBUG) {
         Serial.begin(9600);
@@ -92,9 +83,9 @@ void setup()
     yZero = 0;
     zZero = zValue;
 
-    joySt.xAxis = 0;
-    joySt.yAxis = 0;
-    joySt.zAxis = 0;
+    joystickState.xAxis = 0;
+    joystickState.yAxis = 0;
+    joystickState.zAxis = 0;
 }
 
 // The delta kinematic math
@@ -197,7 +188,7 @@ char* hatStateName(int hat)
     }
 }
 
-float getDeadzone(float value)
+float applyDeadzone(float value)
 {
     if (value < -1*deadzone) {
         value = value + deadzone;
@@ -235,9 +226,9 @@ void loop()
         zValue -= zZero;
 
         // apply deadzone modifiers
-        xValue = getDeadzone(xValue);
-        yValue = getDeadzone(yValue);
-        zValue = getDeadzone(zValue);
+        xValue = applyDeadzone(xValue);
+        yValue = applyDeadzone(yValue);
+        zValue = applyDeadzone(zValue);
 
         // apply gain
         xValue *= gain;
@@ -256,14 +247,14 @@ void loop()
         zValue = 0;
     }
 
-    // map outputs to 8 bit values, update joystick state
-    joySt.xAxis = map(xValue, -100, 100, 0, 255);
-    joySt.yAxis = map(yValue, -100, 100, 0, 255);
-    joySt.zAxis = map(zValue, -100, 100, 0, 255);
+    // map outputs to 8 bit values, update JoystickSt
+    joystickState.xAxis = map(xValue, -100, 100, 0, 255);
+    joystickState.yAxis = map(yValue, -100, 100, 0, 255);
+    joystickState.zAxis = map(zValue, -100, 100, 0, 255);
 
-    // write button and hat states to joystick state
-    joySt.buttons = btn1 | (btn2<<1) | (btn3<<2);
-    joySt.hatSw1 = hat1;
+    // write button and hat states to JoystickSt
+    joystickState.buttons = btn1 | (btn2<<1) | (btn3<<2);
+    joystickState.hatSw1 = hat1;
 
     if (DEBUG) {
         Serial.print("X: ");
@@ -283,7 +274,7 @@ void loop()
     }
 
     // Send to USB
-    Joystick.setState(&joySt);
+    Joystick.setState(&joystickState);
 
     if (DEBUG) {
         delay(1000);
