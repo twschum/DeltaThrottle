@@ -1,0 +1,14 @@
+Mapping of the pins from board -> wire -> microcontroller
+
+BOARD:  WIRE:   PIN:
+COM     BLK     GND
+PB3     WHT     2   H_DOWN
+PB2     GRY     3   BTN3
+PB0     PUR     4   BTN1
+PB1     BLU     5   BTN2
+PB4     GRN     6   H_LEFT
+PB6     YLW     7   H_RIGHT
+PB8     ORG         NONE
+PB7     RED     8   H_CENTER
+PB5     BRN     9   H_UP
+

@@ -32,15 +32,15 @@ float deadzone = 0.1;  // smaller values will be set to 0
 int gain = 150;
 
 // Pin assignments
-#define BTN1 2
-#define BTN2 3
-#define BTN3 4
+#define BTN1 4
+#define BTN2 5
+#define BTN3 3
 
-#define HAT1_UP     5
+#define HAT1_UP     9
 #define HAT1_LEFT   6
-#define HAT1_DOWN   7
-#define HAT1_RIGHT  8
-#define HAT1_CENTER 9
+#define HAT1_DOWN   2
+#define HAT1_RIGHT  7
+#define HAT1_CENTER 8
 
 #define ENABLE  14
 
